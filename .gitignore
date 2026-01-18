@@ -34,7 +34,7 @@ forecasts/
 data/raw/
 data/processed/
 
-
+dvc-storage-project-484712-42439c48ef6f.json
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
