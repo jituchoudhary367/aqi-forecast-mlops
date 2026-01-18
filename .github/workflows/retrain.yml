@@ -1,0 +1,61 @@
+name: AQI Auto Retrain Pipeline
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install dvc[gdrive] mlflow joblib
+
+      # Note: This DVC step assumes you have configured DVC properly.
+      # Since we are currently using Git LFS for simpler storage in this phase,
+      # we might just rely on git fetch.
+      # However, if using actual DVC remote:
+      # - name: Pull data from DVC
+      #   env:
+      #     GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_JSON }}
+      #   run: dvc pull
+      - name: Fetch new data
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+        run: python src/data_fetch/backfill_data.py
+        # Note: In a real scenario, use fetch_weather.py which appends to history.
+        # Using backfill_data.py for now as it regenerates recent history.
+
+      - name: Prepare dataset
+        run: python src/training/prepare_data.py
+
+      - name: Retrain model
+        run: python src/training/train_model.py
+
+      # - name: Push updated data to DVC
+      #   env:
+      #     GDRIVE_CREDENTIALS_DATA: ${{ secrets.GDRIVE_CREDENTIALS_JSON }}
+      #   run: dvc push
+
+      - name: Commit model update
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # Force add in case they are ignored
+          git add -f models/aqi_model.pkl data/processed/train_dataset.csv
+
+          git commit -m "Auto retrain model [skip ci]" || echo "No changes"
+          git push
