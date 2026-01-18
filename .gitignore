@@ -27,12 +27,12 @@ share/python-wheels/
 MANIFEST
 
 # ML artifacts
-models/
-mlruns/
-mlflow.db
-forecasts/
-data/raw/
-data/processed/
+# models/
+# mlruns/
+# mlflow.db
+# forecasts/
+# data/raw/
+# data/processed/
 
 dvc-storage-project-484712-42439c48ef6f.json
 # PyInstaller
