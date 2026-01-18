@@ -37,9 +37,16 @@ def main():
     })
 
     # fake AQI proxy using PM relationship (temporary)
-    df["pm2_5"] = df["temp"] * 1.5
-    df["pm10"] = df["temp"] * 2.5
-    df["aqi"] = (df["pm2_5"] / 10).astype(int)
+    # Scale PM2.5 to be more realistic (e.g. 20-100 range)
+    df["pm2_5"] = df["temp"] * 2.0 + df["wind_speed"] * 1.5 + 20
+    df["pm10"] = df["pm2_5"] * 1.8
+    
+    # Calculate AQI (approximate)
+    # Real AQI calculation is complex, here we use a simple linear proxy for the demo
+    # AQI ~ PM2.5 * 3 (roughly) for indian context often works as a naive proxy
+    df["aqi"] = (df["pm2_5"] * 3).astype(int) 
+    # Clamp to realistic range
+    df["aqi"] = df["aqi"].clip(lower=20, upper=500)
 
     df.to_csv("data/raw/backfill.csv", index=False)
     df.to_csv("data/processed/dataset.csv", index=False)
