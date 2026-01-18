@@ -1,44 +1,52 @@
 import pandas as pd
+from pathlib import Path
 import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
 import mlflow
 import mlflow.sklearn
 
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 
-FEATURES = ["temp", "humidity", "pressure", "wind_speed", "pm2_5", "pm10"]
-TARGET = "target_aqi"
+DATA_PATH = Path("data/processed/train_dataset.csv")
+MODEL_PATH = Path("models/aqi_model.pkl")
 
 
 def main():
-    df = pd.read_csv("data/processed/train_dataset.csv")
+    if not DATA_PATH.exists():
+        print(f"Error: {DATA_PATH} not found.")
+        return
 
-    X = df[FEATURES]
-    y = df[TARGET]
+    df = pd.read_csv(DATA_PATH)
+
+    X = df.drop(columns=["target_aqi"])
+    y = df["target_aqi"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
     with mlflow.start_run():
-        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model = RandomForestRegressor(
+            n_estimators=300,
+            max_depth=12,
+            random_state=42
+        )
         model.fit(X_train, y_train)
 
         preds = model.predict(X_test)
-        mse = mean_squared_error(y_test, preds)
-        rmse = mse ** 0.5
+        rmse = mean_squared_error(y_test, preds) ** 0.5
 
-        mlflow.log_param("model", "RandomForest")
-        mlflow.log_param("n_estimators", 100)
+        mlflow.log_param("n_estimators", 300)
+        mlflow.log_param("max_depth", 12)
         mlflow.log_metric("rmse", rmse)
-
         mlflow.sklearn.log_model(model, "model")
 
-        joblib.dump(model, "models/aqi_model.pkl")
-
         print("RMSE:", rmse)
-        print("Model saved to models/aqi_model.pkl")
+
+        MODEL_PATH.parent.mkdir(exist_ok=True, parents=True) # Ensure parents exist
+        joblib.dump(model, MODEL_PATH)
+        print("Model saved:", MODEL_PATH)
 
 
 if __name__ == "__main__":
