@@ -107,6 +107,6 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "Pushing to Hugging Face Space..."
-          git config --global lfs.allowincompletepush true
+          git lfs uninstall
           git push https://huggllm:$HF_TOKEN@huggingface.co/spaces/huggllm/aqi-forecast-mlops main:main --force
           echo "Deployed to Hugging Face successfully 🚀"
