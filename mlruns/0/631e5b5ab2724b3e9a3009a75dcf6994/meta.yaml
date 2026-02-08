@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Jitendra%20Chaudhary/OneDrive/Desktop/aqi-forecast-mlops/mlruns/0/631e5b5ab2724b3e9a3009a75dcf6994/artifacts
+end_time: 1768757485451
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 631e5b5ab2724b3e9a3009a75dcf6994
+run_name: fun-wasp-68
+run_uuid: 631e5b5ab2724b3e9a3009a75dcf6994
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1768757421093
+status: 3
+tags: []
+user_id: Jitendra Chaudhary

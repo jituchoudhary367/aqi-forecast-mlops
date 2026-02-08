@@ -1,0 +1,93 @@
+name: Debug AQI Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check environment variables
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          LAT: ${{ secrets.LAT }}
+          LON: ${{ secrets.LON }}
+        run: |
+          echo "OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:+SET}"
+          echo "LAT: ${LAT:+SET}"
+          echo "LON: ${LON:+SET}"
+
+      - name: List data files
+        run: |
+          echo "=== Raw data files ==="
+          ls -lh data/raw/ || echo "No raw data directory"
+          echo "=== Processed data files ==="
+          ls -lh data/processed/ || echo "No processed data directory"
+          echo "=== Model files ==="
+          ls -lh models/ || echo "No models directory"
+          echo "=== Forecast files ==="
+          ls -lh forecasts/ || echo "No forecasts directory"
+
+      - name: Test fetch data (verbose)
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          LAT: ${{ secrets.LAT }}
+          LON: ${{ secrets.LON }}
+        run: |
+          echo "Testing data fetch..."
+          python -u src/data_fetch/fetch_data.py
+        continue-on-error: true
+
+      - name: Test build dataset (verbose)
+        run: |
+          echo "Testing dataset build..."
+          python -u src/data_fetch/build_dataset.py
+        continue-on-error: true
+
+      - name: Test prepare data (verbose)
+        run: |
+          echo "Testing data preparation..."
+          python -u src/training/prepare_data.py
+        continue-on-error: true
+
+      - name: Test train model (verbose)
+        run: |
+          echo "Testing model training..."
+          python -u src/training/train_model.py
+        continue-on-error: true
+
+      - name: Test generate forecast (verbose)
+        run: |
+          echo "Testing forecast generation..."
+          python -u src/inference/generate_forecast.py
+        continue-on-error: true
+
+      - name: Show generated files
+        run: |
+          echo "=== Final state ==="
+          echo "Raw data:"
+          ls -lh data/raw/ || echo "None"
+          echo "Processed data:"
+          ls -lh data/processed/ || echo "None"
+          echo "Models:"
+          ls -lh models/ || echo "None"
+          echo "Forecasts:"
+          ls -lh forecasts/ || echo "None"
+          if [ -f forecasts/forecast_*.json ]; then
+            echo "Latest forecast content:"
+            cat forecasts/forecast_*.json
+          fi

@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -23,28 +25,75 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Backfill or Fetch Data
+      - name: Verify environment
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          LAT: ${{ secrets.LAT }}
+          LON: ${{ secrets.LON }}
         run: |
-          python src/data_fetch/backfill_data.py || true
-          python src/data_fetch/fetch_data.py || true
-          python src/data_fetch/build_dataset.py || true
+          echo "Checking environment variables..."
+          if [ -z "$OPENWEATHER_API_KEY" ]; then
+            echo "Error: OPENWEATHER_API_KEY not set"
+            exit 1
+          fi
+          if [ -z "$LAT" ] || [ -z "$LON" ]; then
+            echo "Error: LAT or LON not set"
+            exit 1
+          fi
+          echo "Environment variables configured ✓"
+
+      - name: Fetch latest data
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          LAT: ${{ secrets.LAT }}
+          LON: ${{ secrets.LON }}
+        run: |
+          echo "Fetching weather and pollution data..."
+          python src/data_fetch/fetch_data.py
+
+      - name: Build dataset
+        run: |
+          echo "Building consolidated dataset..."
+          python src/data_fetch/build_dataset.py
 
       - name: Prepare training dataset
         run: |
-          python src/training/prepare_data.py || true
+          echo "Preparing training dataset with temporal features..."
+          python src/training/prepare_data.py
 
       - name: Train model
         run: |
-          python src/training/train_model.py || true
+          echo "Training AQI prediction model..."
+          python src/training/train_model.py
 
       - name: Generate forecast
         run: |
-          python src/inference/generate_forecast.py || true
+          echo "Generating next-day AQI forecast..."
+          python src/inference/generate_forecast.py
 
-      - name: Commit results
+      - name: Verify forecast
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Daily automated AQI pipeline update" || echo "No changes"
-          git push
+          echo "Verifying forecast was generated..."
+          TODAY=$(date -u +%Y-%m-%d)
+          FORECAST_FILE="forecasts/forecast_${TODAY}.json"
+          if [ ! -f "$FORECAST_FILE" ]; then
+            echo "Error: Forecast file not found: $FORECAST_FILE"
+            exit 1
+          fi
+          echo "Forecast file found ✓"
+          cat "$FORECAST_FILE"
+
+      - name: Commit and push results
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/*.csv data/processed/*.csv forecasts/*.json models/*.pkl || true
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Daily automated AQI pipeline update [$(date -u +%Y-%m-%d)]"
+            git push
+            echo "Changes committed and pushed ✓"
+          fi
+

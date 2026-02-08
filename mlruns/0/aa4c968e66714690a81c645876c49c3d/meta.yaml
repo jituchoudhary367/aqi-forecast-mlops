@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Jitendra%20Chaudhary/OneDrive/Desktop/aqi-forecast-mlops/mlruns/0/aa4c968e66714690a81c645876c49c3d/artifacts
+end_time: 1768758703558
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: aa4c968e66714690a81c645876c49c3d
+run_name: honorable-shoat-542
+run_uuid: aa4c968e66714690a81c645876c49c3d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1768758690967
+status: 3
+tags: []
+user_id: Jitendra Chaudhary
