@@ -3,6 +3,7 @@ from pathlib import Path
 import joblib
 import mlflow
 import mlflow.sklearn
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
@@ -26,6 +27,17 @@ def main():
         X, y, test_size=0.2, random_state=42
     )
 
+    # Configure MLflow for CI/CD environment
+    # Use sqlite backend to avoid filesystem path issues in GitHub Actions
+    is_ci = os.getenv("CI") == "true" or os.getenv("GITHUB_ACTIONS") == "true"
+    
+    if is_ci:
+        # In CI, use a simple sqlite database
+        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    else:
+        # Locally, use the default ./mlruns directory
+        mlflow.set_tracking_uri("file:./mlruns")
+
     with mlflow.start_run():
         model = RandomForestRegressor(
             n_estimators=300,
@@ -40,11 +52,14 @@ def main():
         mlflow.log_param("n_estimators", 300)
         mlflow.log_param("max_depth", 12)
         mlflow.log_metric("rmse", rmse)
-        mlflow.sklearn.log_model(model, "model")
+        
+        # Only log model artifacts if not in CI (to avoid path issues)
+        if not is_ci:
+            mlflow.sklearn.log_model(model, "model")
 
         print("RMSE:", rmse)
 
-        MODEL_PATH.parent.mkdir(exist_ok=True, parents=True) # Ensure parents exist
+        MODEL_PATH.parent.mkdir(exist_ok=True, parents=True)
         joblib.dump(model, MODEL_PATH)
         print("Model saved:", MODEL_PATH)
 
