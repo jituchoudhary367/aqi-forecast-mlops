@@ -108,5 +108,11 @@ jobs:
         run: |
           echo "Pushing to Hugging Face Space..."
           git lfs uninstall
-          git push https://huggllm:$HF_TOKEN@huggingface.co/spaces/huggllm/aqi-forecast-mlops main:main --force
+          # Create orphan branch with fresh history (no LFS pointers)
+          git checkout --orphan hf-deploy
+          git add -A
+          git commit -m "Deploy: $(date -u +%Y-%m-%d)"
+          git push https://huggllm:$HF_TOKEN@huggingface.co/spaces/huggllm/aqi-forecast-mlops hf-deploy:main --force
+          git checkout main
+          git branch -D hf-deploy
           echo "Deployed to Hugging Face successfully 🚀"
